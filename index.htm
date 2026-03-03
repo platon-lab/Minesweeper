@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Сапер: Команда Героїв</title>
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --primary: #4a90e2;
+            --cell-bg: #ffffff;
+            --cell-border: #d1d5db;
+            --cell-opened: #e5e7eb;
+            --text-main: #1f2937;
+            --danger: #ef4444;
+            --win: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #app {
+            width: 100%;
+            max-width: 500px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        /* Екрани */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            z-index: 10;
+            transition: opacity 0.3s ease;
+        }
+
+        .hidden { display: none !important; }
+
+        h1 { margin-bottom: 20px; color: var(--primary); }
+
+        /* Вибір персонажа */
+        .char-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .char-card {
+            text-align: center;
+            cursor: pointer;
+            border: 3px solid transparent;
+            border-radius: 12px;
+            padding: 10px;
+            transition: all 0.2s;
+        }
+
+        .char-card:hover, .char-card.selected {
+            border-color: var(--primary);
+            background: #f0f7ff;
+        }
+
+        .char-card img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            border-radius: 50%;
+            background: #eee;
+        }
+
+        .char-card p { margin: 5px 0 0; font-size: 14px; font-weight: bold; }
+
+        /* Вибір складності */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 80%;
+        }
+
+        .btn {
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            background: var(--primary);
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .btn:active { transform: scale(0.98); }
+
+        /* Ігровий інтерфейс */
+        .game-header {
+            padding: 15px;
+            background: #f8fafc;
+            border-bottom: 2px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .player-info { display: flex; align-items: center; gap: 10px; }
+        .player-info img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--primary); }
+        .stats { text-align: right; font-family: monospace; font-size: 18px; font-weight: bold; }
+
+        .board-container {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            overflow: auto;
+            background: #f1f5f9;
+        }
+
+        #minefield {
+            display: grid;
+            gap: 2px;
+            background: #cbd5e1;
+            border: 2px solid #cbd5e1;
+            margin: auto;
+        }
+
+        .cell {
+            width: 30px;
+            height: 30px;
+            background: var(--cell-bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .cell.opened { background: var(--cell-opened); cursor: default; }
+        .cell.flagged::after { content: "🚩"; font-size: 12px; }
+        .cell img { width: 80%; height: 80%; object-fit: contain; }
+
+        .n1 { color: #2563eb; }
+        .n2 { color: #16a34a; }
+        .n3 { color: #dc2626; }
+        .n4 { color: #7c3aed; }
+        .n5 { color: #92400e; }
+
+        /* Модальне вікно */
+        .modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            z-index: 100;
+            width: 80%;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="setup-screen" class="screen">
+        <h1>Обери Героя</h1>
+        <div class="char-grid" id="char-list">
+            </div>
+        <div class="btn-group">
+            <button class="btn" onclick="startGame(8, 10)">Легка (8×8)</button>
+            <button class="btn" onclick="startGame(12, 20)">Середня (12×12)</button>
+            <button class="btn" onclick="startGame(16, 40)">Складна (16×16)</button>
+        </div>
+    </div>
+
+    <div id="game-screen" class="screen hidden">
+        <div class="game-header">
+            <div class="player-info">
+                <img id="current-char-img" src="" alt="">
+                <span id="current-char-name" style="font-weight: bold;"></span>
+            </div>
+            <div class="stats">
+                <div>🚩 <span id="mine-count">0</span></div>
+                <div>⏱️ <span id="timer">000</span></div>
+            </div>
+            <button class="btn" style="padding: 8px 15px;" onclick="resetToMenu()">Меню</button>
+        </div>
+        
+        <div class="board-container">
+            <div id="minefield"></div>
+        </div>
+    </div>
+
+    <div id="game-modal" class="modal hidden">
+        <h2 id="modal-title">Перемога!</h2>
+        <p id="modal-text"></p>
+        <button class="btn" onclick="resetToMenu()">Грати знову</button>
+    </div>
+</div>
+
+<script>
+    const characters = [
+        { name: 'Tito', img: 'Tito.png' },
+        { name: 'Smartik', img: 'Smartik.png' },
+        { name: 'Junior', img: 'Junior.png' },
+        { name: 'Fil', img: 'Fil.png' },
+        { name: 'Milka', img: 'Milka.png' }
+    ];
+
+    let selectedChar = characters[0];
+    let enemyCharImg = characters[1].img;
+    let grid = [];
+    let rows, cols, minesCount;
+    let revealedCount = 0;
+    let flags = 0;
+    let timerInterval;
+    let time = 0;
+    let isGameOver = false;
+    let longPressTimer;
+
+    // Ініціалізація вибору персонажів
+    const charList = document.getElementById('char-list');
+    characters.forEach((char, index) => {
+        const div = document.createElement('div');
+        div.className = `char-card ${index === 0 ? 'selected' : ''}`;
+        div.innerHTML = `<img src="${char.img}" onerror="this.src='https://via.placeholder.com/60?text=${char.name}'"><p>${char.name}</p>`;
+        div.onclick = () => {
+            document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+            div.classList.add('selected');
+            selectedChar = char;
+            // Ворог - будь-який інший персонаж
+            const others = characters.filter(c => c.name !== char.name);
+            enemyCharImg = others[Math.floor(Math.random() * others.length)].img;
+        };
+        charList.appendChild(div);
+    });
+
+    function startGame(size, mines) {
+        rows = size;
+        cols = size;
+        minesCount = mines;
+        revealedCount = 0;
+        flags = 0;
+        time = 0;
+        isGameOver = false;
+
+        document.getElementById('setup-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        document.getElementById('game-modal').classList.add('hidden');
+        
+        document.getElementById('current-char-img').src = selectedChar.img;
+        document.getElementById('current-char-name').innerText = selectedChar.name;
+        document.getElementById('mine-count').innerText = minesCount;
+
+        createBoard();
+        startTimer();
+    }
+
+    function createBoard() {
+        const board = document.getElementById('minefield');
+        board.innerHTML = '';
+        board.style.gridTemplateColumns = `repeat(${cols}, 30px)`;
+        
+        grid = [];
+        for (let r = 0; r < rows; r++) {
+            grid[r] = [];
+            for (let c = 0; c < cols; c++) {
+                const cellEl = document.createElement('div');
+                cellEl.className = 'cell';
+                cellEl.dataset.r = r;
+                cellEl.dataset.c = c;
+                
+                // Керування (Клік + Довге натискання)
+                cellEl.addEventListener('click', () => handleCellClick(r, c));
+                cellEl.addEventListener('contextmenu', (e) => { e.preventDefault(); toggleFlag(r, c); });
+                
+                // Mobile Long Press
+                cellEl.addEventListener('touchstart', (e) => {
+                    longPressTimer = setTimeout(() => {
+                        toggleFlag(r, c);
+                        longPressTimer = null;
+                    }, 500);
+                }, {passive: true});
+                cellEl.addEventListener('touchend', () => {
+                    if (longPressTimer) clearTimeout(longPressTimer);
+                });
+
+                board.appendChild(cellEl);
+                grid[r][c] = { isMine: false, opened: false, flagged: false, neighbors: 0, el: cellEl };
+            }
+        }
+
+        // Розміщення мін
+        let placed = 0;
+        while (placed < minesCount) {
+            let r = Math.floor(Math.random() * rows);
+            let c = Math.floor(Math.random() * cols);
+            if (!grid[r][c].isMine) {
+                grid[r][c].isMine = true;
+                placed++;
+            }
+        }
+
+        // Обчислення цифр
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (grid[r][c].isMine) continue;
+                let count = 0;
+                for (let i = -1; i <= 1; i++) {
+                    for (let j = -1; j <= 1; j++) {
+                        if (grid[r + i]?.[c + j]?.isMine) count++;
+                    }
+                }
+                grid[r][c].neighbors = count;
+            }
+        }
+    }
+
+    function handleCellClick(r, c) {
+        if (isGameOver || grid[r][c].opened || grid[r][c].flagged) return;
+
+        if (grid[r][c].isMine) {
+            gameOver(false);
+            return;
+        }
+
+        revealCell(r, c);
+
+        if (revealedCount === (rows * cols) - minesCount) {
+            gameOver(true);
+        }
+    }
+
+    function revealCell(r, c) {
+        const cell = grid[r][c];
+        if (cell.opened || cell.flagged) return;
+
+        cell.opened = true;
+        cell.el.classList.add('opened');
+        revealedCount++;
+
+        if (cell.neighbors > 0) {
+            cell.el.innerText = cell.neighbors;
+            cell.el.classList.add('n' + cell.neighbors);
+        } else {
+            // Пуста клітинка -> відкриваємо сусідів
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (grid[r + i]?.[c + j]) revealCell(r + i, c + j);
+                }
+            }
+        }
+    }
+
+    function toggleFlag(r, c) {
+        if (isGameOver || grid[r][c].opened) return;
+        const cell = grid[r][c];
+        cell.flagged = !cell.flagged;
+        cell.el.classList.toggle('flagged');
+        flags += cell.flagged ? 1 : -1;
+        document.getElementById('mine-count').innerText = minesCount - flags;
+    }
+
+    function gameOver(win) {
+        isGameOver = true;
+        clearInterval(timerInterval);
+
+        // Показуємо всі міни
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (grid[r][c].isMine) {
+                    grid[r][c].el.innerHTML = `<img src="${enemyCharImg}" onerror="this.src='https://via.placeholder.com/25?text=X'">`;
+                    if (!win) grid[r][c].el.style.background = 'var(--danger)';
+                }
+            }
+        }
+
+        const modal = document.getElementById('game-modal');
+        const title = document.getElementById('modal-title');
+        const text = document.getElementById('modal-text');
+
+        title.innerText = win ? "Перемога! 🎉" : "Гру закінчено! 💥";
+        title.style.color = win ? "var(--win)" : "var(--danger)";
+        text.innerText = win ? `Ви врятували ${selectedChar.name} за ${time} сек!` : `Вас спіймали! Спробуйте ще раз.`;
+        
+        modal.classList.remove('hidden');
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        document.getElementById('timer').innerText = "000";
+        timerInterval = setInterval(() => {
+            time++;
+            document.getElementById('timer').innerText = time.toString().padStart(3, '0');
+        }, 1000);
+    }
+
+    function resetToMenu() {
+        clearInterval(timerInterval);
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('game-modal').classList.add('hidden');
+        document.getElementById('setup-screen').classList.remove('hidden');
+    }
+</script>
+
+</body>
+</html>
