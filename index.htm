@@ -4,16 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Сапер: Команда Героїв</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #f0f2f5;
-            --primary: #4a90e2;
-            --cell-bg: #ffffff;
-            --cell-border: #d1d5db;
-            --cell-opened: #e5e7eb;
-            --text-main: #1f2937;
+            --bg: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.5);
+            --accent: #06b6d4;
+            --cell-bg: rgba(255, 255, 255, 0.06);
+            --cell-border: rgba(255, 255, 255, 0.1);
+            --cell-opened: rgba(255, 255, 255, 0.15);
+            --text-main: #f8fafc;
             --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.4);
             --win: #10b981;
+            --win-glow: rgba(16, 185, 129, 0.4);
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.08);
         }
 
         * {
@@ -24,8 +31,8 @@
 
         body {
             margin: 0;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg);
+            font-family: 'Montserrat', sans-serif;
+            background: var(--bg);
             color: var(--text-main);
             display: flex;
             justify-content: center;
@@ -40,9 +47,13 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            background: white;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-left: 1px solid var(--glass-border);
+            border-right: 1px solid var(--glass-border);
             position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
         /* Екрани */
@@ -52,129 +63,243 @@
             left: 0;
             width: 100%;
             height: 100%;
-            padding: 20px;
+            padding: 25px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: white;
+            background: transparent;
             z-index: 10;
-            transition: opacity 0.3s ease;
+            transition: all 0.3s ease;
         }
 
-        .hidden { display: none !important; }
+        .hidden { display: none !important; opacity: 0; pointer-events: none; }
 
-        h1 { margin-bottom: 20px; color: var(--primary); }
+        h1 { 
+            margin-top: 0;
+            margin-bottom: 25px; 
+            color: var(--text-main); 
+            font-weight: 900; 
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            text-shadow: 0 0 20px var(--primary-glow);
+            font-size: 28px;
+            text-align: center;
+        }
 
-        /* Вибір персонажа */
+        /* Вибір персонажа з підтримкою плавного скролу */
         .char-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-bottom: 30px;
+            gap: 12px;
+            margin-bottom: 25px;
+            width: 100%;
+            max-height: 320px;
+            overflow-y: auto;
+            padding: 8px;
+            border-radius: 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            /* Плавний скрол на мобільних та ПК */
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Стилізація скроллбару */
+        .char-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+        .char-grid::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .char-grid::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+        }
+        .char-grid::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
         }
 
         .char-card {
             text-align: center;
             cursor: pointer;
-            border: 3px solid transparent;
-            border-radius: 12px;
-            padding: 10px;
-            transition: all 0.2s;
+            border: 2px solid transparent;
+            border-radius: 14px;
+            padding: 12px 8px;
+            background: rgba(255, 255, 255, 0.03);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .char-card:hover, .char-card.selected {
+        .char-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .char-card.selected {
             border-color: var(--primary);
-            background: #f0f7ff;
+            background: rgba(139, 92, 246, 0.15);
+            box-shadow: 0 0 15px var(--primary-glow);
+            transform: scale(1.02);
         }
 
         .char-card img {
-            width: 60px;
-            height: 60px;
-            object-fit: contain;
+            width: 65px;
+            height: 65px;
+            object-fit: cover;
             border-radius: 50%;
-            background: #eee;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s;
         }
 
-        .char-card p { margin: 5px 0 0; font-size: 14px; font-weight: bold; }
+        .char-card.selected img {
+            border-color: var(--primary);
+        }
+
+        .char-card p { 
+            margin: 8px 0 0; 
+            font-size: 13px; 
+            font-weight: 700; 
+            color: #cbd5e1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .char-card.selected p {
+            color: #ffffff;
+        }
 
         /* Вибір складності */
         .btn-group {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            width: 80%;
+            gap: 12px;
+            width: 100%;
         }
 
         .btn {
-            padding: 15px;
+            padding: 16px;
             border: none;
-            border-radius: 8px;
-            background: var(--primary);
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
             color: white;
-            font-size: 16px;
-            font-weight: bold;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
             cursor: pointer;
-            transition: transform 0.1s;
+            box-shadow: 0 4px 12px var(--primary-glow);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px var(--primary-glow);
+            filter: brightness(1.1);
         }
 
         .btn:active { transform: scale(0.98); }
 
         /* Ігровий інтерфейс */
         .game-header {
-            padding: 15px;
-            background: #f8fafc;
-            border-bottom: 2px solid #e2e8f0;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.6);
+            border-bottom: 1px solid var(--glass-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
             width: 100%;
         }
 
-        .player-info { display: flex; align-items: center; gap: 10px; }
-        .player-info img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--primary); }
-        .stats { text-align: right; font-family: monospace; font-size: 18px; font-weight: bold; }
+        .player-info { display: flex; align-items: center; gap: 12px; }
+        .player-info img { 
+            width: 45px; 
+            height: 45px; 
+            border-radius: 50%; 
+            border: 2px solid var(--primary); 
+            box-shadow: 0 0 10px var(--primary-glow);
+            object-fit: cover;
+        }
+        
+        #current-char-name {
+            font-size: 16px;
+            letter-spacing: 0.5px;
+        }
+        
+        .stats { 
+            display: flex;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            font-family: monospace; 
+            font-size: 18px; 
+            font-weight: bold; 
+        }
 
         .board-container {
             flex-grow: 1;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 10px;
+            padding: 15px;
             overflow: auto;
-            background: #f1f5f9;
+            background: rgba(0, 0, 0, 0.15);
         }
 
         #minefield {
             display: grid;
-            gap: 2px;
-            background: #cbd5e1;
-            border: 2px solid #cbd5e1;
+            gap: 3px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 6px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.4);
             margin: auto;
         }
 
         .cell {
-            width: 30px;
-            height: 30px;
+            width: 32px;
+            height: 32px;
             background: var(--cell-bg);
+            border: 1px solid var(--cell-border);
+            border-radius: 6px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-weight: bold;
-            font-size: 14px;
+            font-weight: 800;
+            font-size: 15px;
             cursor: pointer;
-            transition: background 0.1s;
+            transition: all 0.15s ease;
         }
 
-        .cell.opened { background: var(--cell-opened); cursor: default; }
-        .cell.flagged::after { content: "🚩"; font-size: 12px; }
-        .cell img { width: 80%; height: 80%; object-fit: contain; }
+        .cell:hover:not(.opened):not(.flagged) {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
 
-        .n1 { color: #2563eb; }
-        .n2 { color: #16a34a; }
-        .n3 { color: #dc2626; }
-        .n4 { color: #7c3aed; }
-        .n5 { color: #92400e; }
+        .cell.opened { 
+            background: var(--cell-opened); 
+            border-color: rgba(255,255,255,0.05);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+            cursor: default; 
+        }
+        
+        .cell.flagged {
+            background: rgba(234, 179, 8, 0.1);
+            border-color: rgba(234, 179, 8, 0.4);
+        }
+        
+        .cell.flagged::after { content: "🚩"; font-size: 13px; filter: drop-shadow(0 0 2px rgba(234, 179, 8, 0.5)); }
+        .cell img { width: 85%; height: 85%; object-fit: cover; border-radius: 50%; }
+
+        .n1 { color: #38bdf8; text-shadow: 0 0 4px rgba(56, 189, 248, 0.4); }
+        .n2 { color: #4ade80; text-shadow: 0 0 4px rgba(74, 222, 128, 0.4); }
+        .n3 { color: #f87171; text-shadow: 0 0 4px rgba(248, 113, 113, 0.4); }
+        .n4 { color: #c084fc; text-shadow: 0 0 4px rgba(192, 132, 252, 0.4); }
+        .n5 { color: #fb923c; text-shadow: 0 0 4px rgba(251, 146, 60, 0.4); }
 
         /* Модальне вікно */
         .modal {
@@ -182,13 +307,37 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            padding: 35px 25px;
+            border-radius: 24px;
             text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
             z-index: 100;
-            width: 80%;
+            width: 85%;
+            animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        @keyframes modalPop {
+            from { transform: translate(-50%, -40%) scale(0.9); opacity: 0; }
+            to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        .modal h2 {
+            margin-top: 0;
+            font-weight: 900;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        #modal-text {
+            font-size: 15px;
+            color: #94a3b8;
+            margin-bottom: 25px;
+            line-height: 1.5;
         }
     </style>
 </head>
@@ -197,8 +346,7 @@
 <div id="app">
     <div id="setup-screen" class="screen">
         <h1>Обери Героя</h1>
-        <div class="char-grid" id="char-list">
-            </div>
+        <div class="char-grid" id="char-list"></div>
         <div class="btn-group">
             <button class="btn" onclick="startGame(8, 10)">Легка (8×8)</button>
             <button class="btn" onclick="startGame(12, 20)">Середня (12×12)</button>
@@ -216,7 +364,7 @@
                 <div>🚩 <span id="mine-count">0</span></div>
                 <div>⏱️ <span id="timer">000</span></div>
             </div>
-            <button class="btn" style="padding: 8px 15px;" onclick="resetToMenu()">Меню</button>
+            <button class="btn" style="padding: 10px 18px; font-size: 13px; box-shadow: none; border-radius: 10px;" onclick="resetToMenu()">Меню</button>
         </div>
         
         <div class="board-container">
@@ -227,7 +375,7 @@
     <div id="game-modal" class="modal hidden">
         <h2 id="modal-title">Перемога!</h2>
         <p id="modal-text"></p>
-        <button class="btn" onclick="resetToMenu()">Грати знову</button>
+        <button class="btn" style="width: 100%;" onclick="resetToMenu()">Грати знову</button>
     </div>
 </div>
 
@@ -238,7 +386,24 @@
         { name: 'Junior', img: 'Junior.png' },
         { name: 'Fil', img: 'Fil.png' },
         { name: 'Milka', img: 'Milka.png' },
-        { name: 'Bark', img: 'Bark.png' }
+        { name: 'Bark', img: 'Bark.png' },
+        // 16 нових героїв із кастомним аудіо треком Tiles.mp3
+        { name: 'Persik', img: 'Persik.png', audio: 'Tiles.mp3' },
+        { name: 'Spike', img: 'Spike.png', audio: 'Tiles.mp3' },
+        { name: 'Alyonka', img: 'Alyonka.png', audio: 'Tiles.mp3' },
+        { name: 'Lilu', img: 'Lilu.png', audio: 'Tiles.mp3' },
+        { name: 'Manya', img: 'Manya.png', audio: 'Tiles.mp3' },
+        { name: 'Liza', img: 'Liza.png', audio: 'Tiles.mp3' },
+        { name: 'Grivna', img: 'Grivna.png', audio: 'Tiles.mp3' },
+        { name: 'Ben', img: 'Ben.png', audio: 'Tiles.mp3' },
+        { name: 'Goldi', img: 'Goldi.png', audio: 'Tiles.mp3' },
+        { name: 'Raf', img: 'Raf.png', audio: 'Tiles.mp3' },
+        { name: 'Veles', img: 'Veles.png', audio: 'Tiles.mp3' },
+        { name: 'Masha', img: 'Masha.png', audio: 'Tiles.mp3' },
+        { name: 'Brilliantik', img: 'Brilliantik.png', audio: 'Tiles.mp3' },
+        { name: 'Richik', img: 'Richik.png', audio: 'Tiles.mp3' },
+        { name: 'Shunya', img: 'Shunya.png', audio: 'Tiles.mp3' },
+        { name: 'Baks', img: 'Baks.png', audio: 'Tiles.mp3' }
     ];
 
     let selectedChar = characters[0];
@@ -257,11 +422,19 @@
     characters.forEach((char, index) => {
         const div = document.createElement('div');
         div.className = `char-card ${index === 0 ? 'selected' : ''}`;
-        div.innerHTML = `<img src="${char.img}" onerror="this.src='https://via.placeholder.com/60?text=${char.name}'"><p>${char.name}</p>`;
+        div.innerHTML = `<img src="${char.img}" onerror="this.src='https://via.placeholder.com/65?text=${char.name.substring(0,2)}'"><p>${char.name}</p>`;
+        
         div.onclick = () => {
             document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
             div.classList.add('selected');
             selectedChar = char;
+
+            // Відтворення Tiles.mp3 для нових героїв
+            if (char.audio) {
+                const snd = new Audio(char.audio);
+                snd.play().catch(e => console.log("Аудіо заблоковано браузером або файл відсутній"));
+            }
+
             // Ворог - будь-який інший персонаж
             const others = characters.filter(c => c.name !== char.name);
             enemyCharImg = others[Math.floor(Math.random() * others.length)].img;
@@ -293,7 +466,7 @@
     function createBoard() {
         const board = document.getElementById('minefield');
         board.innerHTML = '';
-        board.style.gridTemplateColumns = `repeat(${cols}, 30px)`;
+        board.style.gridTemplateColumns = `repeat(${cols}, 32px)`;
         
         grid = [];
         for (let r = 0; r < rows; r++) {
@@ -403,8 +576,11 @@
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
                 if (grid[r][c].isMine) {
-                    grid[r][c].el.innerHTML = `<img src="${enemyCharImg}" onerror="this.src='https://via.placeholder.com/25?text=X'">`;
-                    if (!win) grid[r][c].el.style.background = 'var(--danger)';
+                    grid[r][c].el.innerHTML = `<img src="${enemyCharImg}" onerror="this.src='https://via.placeholder.com/25?text=💥'">`;
+                    if (!win) {
+                        grid[r][c].el.style.background = 'var(--danger)';
+                        grid[r][c].el.style.boxShadow = '0 0 8px var(--danger-glow)';
+                    }
                 }
             }
         }
@@ -415,6 +591,7 @@
 
         title.innerText = win ? "Перемога! 🎉" : "Гру закінчено! 💥";
         title.style.color = win ? "var(--win)" : "var(--danger)";
+        title.style.textShadow = win ? "0 0 15px var(--win-glow)" : "0 0 15px var(--danger-glow)";
         text.innerText = win ? `Ви врятували ${selectedChar.name} за ${time} сек!` : `Вас спіймали! Спробуйте ще раз.`;
         
         modal.classList.remove('hidden');
